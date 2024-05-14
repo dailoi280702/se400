@@ -4,6 +4,7 @@ from model import CourseRecommendationModel  # Replace with your model definitio
 import pandas as pd
 import sys
 import signal
+import threading
 
 # from sklearn.model_selection import train_test_split
 
@@ -82,22 +83,9 @@ def retrain_model():
     """
 
     try:
-        # # ... (extract data for retraining)
-        #
-        # # Load data (replace with your data loading logic)
-        # df = pd.DataFrame(data)  # Replace with your actual data loading
-        #
-        # # Preprocess data for training
-        # # ... (e.g., clean, encode, split)
-        #
-        # # Train-test split
-        # X_train, X_test, y_train, y_test = train_test_split(
-        #     # ... (features),
-        #     # ... (target)
-        # )
-        #
-        # # Train the model
-        # model.train(X_train, y_train)
+        if not model.isTraining:
+            thread = threading.Thread(target=lambda: model.train())
+            thread.run
 
         # Save the trained model
         model.save_to_file("model.pt")  # Replace with your path

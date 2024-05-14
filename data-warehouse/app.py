@@ -7,6 +7,8 @@ import sys
 app = Flask(__name__)
 ROUTE_PREFIX = "/warehouse"
 
+DEFAULT_WEBHOOK_URL = "http://course-recommendation:5000/recommendation-model/retrain"
+
 
 @app.route(f"{ROUTE_PREFIX}/process_data", methods=["POST"])
 def process_data():
@@ -44,10 +46,7 @@ def process_data():
             except requests.exceptions.RequestException as e:
                 print(f"Error sending webhook to {webhook_url}: {e}")
         else:
-            print("No custom webhook URL provided, using default...")
-
-            # Define your default webhook URL (replace with your actual URL)
-            DEFAULT_WEBHOOK_URL = "https://your-default-webhook-endpoint.com"
+            print("No custom webhook URL provided, using default...", flush=True)
 
             # Send POST request to the default webhook URL
             try:
@@ -60,7 +59,9 @@ def process_data():
                     f"Webhook sent to {DEFAULT_WEBHOOK_URL} (status code: {response.status_code})"
                 )
             except requests.exceptions.RequestException as e:
-                print(f"Error sending webhook to {DEFAULT_WEBHOOK_URL}: {e}")
+                print(
+                    f"Error sending webhook to {DEFAULT_WEBHOOK_URL}: {e}", flush=True
+                )
 
         # Return success message
         return jsonify({"message": "Data processing successful!"})

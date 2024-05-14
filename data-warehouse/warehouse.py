@@ -1,5 +1,6 @@
 import psycopg2
 import pandas as pd
+import numpy as np
 
 
 def process_data_from_db():
@@ -17,11 +18,26 @@ def process_data_from_db():
         password="postgres",
     )
 
-    # Extract data from database (replace with your specific query)
+    # Extract data from database
     sql_query = "SELECT * FROM Courses;"
 
     print("ETL: transforming data", flush=True)
     data = pd.read_sql(sql_query, conn)
+
+    # Drop unnecessary columns
+    data.drop(columns=["created_date", "updated_date", "duration"], inplace=True)
+
+    # Fill missing or 0 values in rating with the average (excluding NaN)
+    def clean_zero_value(data):
+        data["rating"] = data["rating"].where(
+            ~data["rating"].isin([0, np.nan]), data["rating"].mean(skipna=True)
+        )
+
+        # Fill remaining NaN with the mean excluding 0.0
+        data["rating"] = data["rating"].fillna(data["rating"].mean(skipna=True))
+        return data
+
+    data = clean_zero_value(data.copy())
 
     # Save data to shared volume
     print("ETL: loading data to data lake", flush=True)
