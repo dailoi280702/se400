@@ -1,11 +1,14 @@
 import requests  # Import requests library for making HTTP requests
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, signals
 from warehouse import process_data_from_db
+import signal
+import sys
 
 app = Flask(__name__)
+ROUTE_PREFIX = "/warehouse"
 
 
-@app.route("/warehouse/process_data", methods=["POST"])
+@app.route(f"{ROUTE_PREFIX}/process_data", methods=["POST"])
 def process_data():
     """
     Triggers data processing logic on demand and sends a webhook notification.
@@ -70,4 +73,9 @@ def process_data():
 
 
 if __name__ == "__main__":
+    signal.signal(
+        signal.SIGTERM,
+        lambda sig, frame: sys.exit(0),
+    )
+
     app.run(host="0.0.0.0", port=5000)  # Run the API on port 5000

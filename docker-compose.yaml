@@ -39,6 +39,19 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
+  course-recommendation:
+    build: course-recommendation
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.recommendationModelRouter.rule=PathPrefix(`/recommendation-model`)"
+      - "traefik.http.services.recommendationModelRouter.loadbalancer.server.port=5000"
+      - "traefik.docker.network=traefik-net"
+    networks:
+      - traefik-net
+      - backend-net
+    volumes:
+      - data-lake:/data
+
   postgres:
     image: postgres:latest
     environment:
