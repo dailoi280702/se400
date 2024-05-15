@@ -27,7 +27,10 @@ def process_data_from_db():
     data["tags"] = data["name"].str.cat(
         [data["description"], data["skills_covered"]], sep=" "
     )
-    data["tags"] = data["skills_covered"]
+
+    data["tags"] = data["tags"].str.lower()
+
+    # data["tags"] = data["skills_covered"]
     data = data.copy()[["id", "rating", "tags"]]
 
     # Fill missing or 0 values in rating with the average (excluding NaN)

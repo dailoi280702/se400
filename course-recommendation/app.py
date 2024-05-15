@@ -4,7 +4,6 @@ import signal
 import sys
 import time
 import torch
-import torch
 import traceback
 import os
 import pandas as pd
