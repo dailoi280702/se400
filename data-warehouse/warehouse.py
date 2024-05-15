@@ -24,8 +24,7 @@ def process_data_from_db():
     print("ETL: transforming data", flush=True)
     data = pd.read_sql(sql_query, conn)
 
-    # Drop unnecessary columns
-    data.drop(columns=["created_date", "updated_date", "duration"], inplace=True)
+    data = data.copy()[["id", "difficulty_level", "rating", "skills_covered"]]
 
     # Fill missing or 0 values in rating with the average (excluding NaN)
     def clean_zero_value(data):
