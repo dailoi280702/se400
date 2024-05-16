@@ -23,6 +23,10 @@ services:
       - "traefik.docker.network=traefik-net"
     networks:
       - traefik-net
+      - backend-net
+    depends_on:
+      - postgres
+      - redis
 
   data-warehouse:
     build: data-warehouse
