@@ -4,6 +4,7 @@ import (
 	"backend/client/postgres"
 	"backend/client/redis"
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -241,5 +242,26 @@ func SuggestCourses(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, map[string]any{
 		"data": data,
+	})
+}
+
+func ClearSuggestedCoursesCache(c echo.Context) error {
+	go func() {
+		pattern := "recommended-courses:*"
+		r := redisC.RDB
+		keys, err := r.C.Keys(context.Background(), pattern).Result()
+		if err != nil {
+			log.Println("Error deleting key:", err)
+		}
+
+		for _, key := range keys {
+			if err := r.C.Del(context.Background(), key).Err(); err != nil {
+				log.Println("Error deleting key:", key, err)
+			}
+		}
+	}()
+
+	return c.JSON(http.StatusOK, map[string]any{
+		"message": "Clear suggested courses cache event in process",
 	})
 }

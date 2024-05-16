@@ -45,4 +45,5 @@ func registerRouter(e *echo.Group) {
 	e.GET("/search", handlers.SearchCourses)
 
 	e.POST("/suggest", handlers.SuggestCourses)
+	e.POST("/webhook/clear-course-suggestions", handlers.ClearSuggestedCoursesCache)
 }
