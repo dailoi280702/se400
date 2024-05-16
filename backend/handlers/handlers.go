@@ -50,3 +50,49 @@ func GetCourses(c echo.Context) error {
 		"data": data,
 	})
 }
+
+type SearchReq struct {
+	Value string `query:"value"`
+	PaginationReq
+}
+
+func SearchCourses(c echo.Context) error {
+	req := SearchReq{}
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest)
+	}
+
+	p := req.Transform()
+
+	req.Value = strings.TrimSpace(req.Value)
+	if req.Value == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "Value for search request is required")
+	}
+
+	db := postgresC.DB
+	data := make([]Coures, 0)
+
+	query := `
+        select id, name, university_name, description, rating, skills_covered 
+        from courses 
+        where (name ilike '%$1::string%' or skills_covered ilike '%$1::string%')
+        limit $2 offset $3`
+
+	rows, err := db.Queryx(query, req.Value, p.Limit, p.Offset)
+	if err != nil && err != sql.ErrNoRows {
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("fail to search courses: %+v", err))
+	}
+
+	for rows.Next() {
+		var c Coures
+		if err := rows.StructScan(&c); err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("fail to bind course: %+v", err))
+		}
+		c.Skills = strings.Split(c.SkillsStr, "  ")
+		data = append(data, c)
+	}
+
+	return c.JSON(http.StatusOK, map[string]any{
+		"data": data,
+	})
+}

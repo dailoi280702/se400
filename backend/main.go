@@ -41,4 +41,6 @@ func main() {
 func registerRouter(e *echo.Group) {
 	coursesGr := e.Group("/courses")
 	coursesGr.GET("", handlers.GetCourses)
+
+	e.GET("/search", handlers.SearchCourses)
 }
