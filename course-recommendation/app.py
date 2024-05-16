@@ -3,7 +3,6 @@ from threading import Thread
 import signal
 import sys
 import time
-import torch
 import traceback
 import os
 import pandas as pd
@@ -13,6 +12,7 @@ from nltk.stem.porter import PorterStemmer
 from sklearn.metrics.pairwise import cosine_similarity
 import pickle
 import math
+import requests
 
 global similarity, data
 data_path = "/data/processed_data.csv"
@@ -193,6 +193,20 @@ def retrain_model():
         return jsonify({"error": "Internal server error"}), 500
 
 
+CLEAR_CACHE_WEBHOOK_URL = "http://backend:8080/api/webhook/clear-course-suggestions"
+
+
+def clear_be_cache():
+    try:
+        print("!Notyfied backend service to clear related cache", flush=True)
+
+        response = requests.post(CLEAR_CACHE_WEBHOOK_URL)
+        response.raise_for_status()  # Raise exception for non-2xx status codes
+
+    except requests.exceptions.RequestException as e:
+        print(f"Error sending webhook to {CLEAR_CACHE_WEBHOOK_URL}: {e}", flush=True)
+
+
 def retrain_in_thread():
     """
     Retrains the model in a separate thread.
@@ -200,8 +214,7 @@ def retrain_in_thread():
 
     try:
         train(data_path, model_path)
-
-        print("Model retraining completed!")
+        clear_be_cache()
 
     except Exception as e:
         print(f"An error occurred during retraining: {e}", flush=True)
