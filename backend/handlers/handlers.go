@@ -1,7 +1,8 @@
 package handlers
 
 import (
-	postgresC "backend/client/postgres"
+	"backend/client/postgres"
+	"backend/client/redis"
 	"bytes"
 	"database/sql"
 	"encoding/json"
@@ -11,6 +12,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/labstack/echo/v4"
 )
@@ -25,15 +27,29 @@ type Course struct {
 	Skills         []string `json:"skills_covered"`
 }
 
+func cacheCourses(r *redisC.RedisC, key string, value any, expiration time.Duration) {
+	if err := r.SetJSON(key, value, expiration); err != nil {
+		log.Println(err)
+	}
+}
+
 func GetCourses(c echo.Context) error {
 	pReq := PaginationReq{}
 	if err := c.Bind(&pReq); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest)
 	}
+
 	p := pReq.Transform()
+	data := make([]Course, 0)
+	r := redisC.RDB
+	k := fmt.Sprintf("courses:%+v", pReq)
+
+	// get from cache
+	if err := r.GetJSON(k, &data); err == nil && len(data) > 0 {
+		return c.JSON(http.StatusOK, data)
+	}
 
 	db := postgresC.DB
-	data := make([]Course, 0)
 
 	query := fmt.Sprintf(`select id, name, university_name, description, rating, skills_covered from courses limit %d offset %d`, p.Limit, p.Offset)
 
@@ -50,6 +66,9 @@ func GetCourses(c echo.Context) error {
 		c.Skills = strings.Split(c.SkillsStr, "  ")
 		data = append(data, c)
 	}
+
+	// save to cache
+	go cacheCourses(r, k, data, 2*time.Minute)
 
 	return c.JSON(http.StatusOK, map[string]any{
 		"data": data,
@@ -68,6 +87,14 @@ func SearchCourses(c echo.Context) error {
 	}
 
 	p := req.Transform()
+	k := fmt.Sprintf("search:%+v", req)
+	r := redisC.RDB
+	data := make([]Course, 0)
+
+	// get from cache
+	if err := r.GetJSON(k, &data); err == nil && len(data) > 0 {
+		return c.JSON(http.StatusOK, data)
+	}
 
 	req.Value = strings.TrimSpace(req.Value)
 	if req.Value == "" {
@@ -79,7 +106,6 @@ func SearchCourses(c echo.Context) error {
 	}
 
 	db := postgresC.DB
-	data := make([]Course, 0)
 
 	escapedValue := "%" + strings.ReplaceAll(req.Value, "\\", "\\\\") + "%"
 
@@ -103,6 +129,9 @@ func SearchCourses(c echo.Context) error {
 		data = append(data, c)
 	}
 
+	// save to cache
+	go cacheCourses(r, k, data, 2*time.Minute)
+
 	return c.JSON(http.StatusOK, map[string]any{
 		"data": data,
 	})
@@ -124,6 +153,15 @@ func SuggestCourses(c echo.Context) error {
 
 	if len(req.CourseIds) == 0 {
 		return echo.NewHTTPError(http.StatusBadRequest, "course ids can not be empty")
+	}
+
+	data := make([]Course, 0)
+	r := redisC.RDB
+	k := fmt.Sprintf("recommended-courses:%+v", req)
+
+	// get from cache
+	if err := r.GetJSON(k, &data); err == nil && len(data) > 0 {
+		return c.JSON(http.StatusOK, data)
 	}
 
 	url := "http://course-recommendation:5000/recommendation-model/predict"
@@ -169,7 +207,6 @@ func SuggestCourses(c echo.Context) error {
 	}
 
 	db := postgresC.DB
-	data := make([]Course, 0)
 
 	// Format comma-separated list of course IDs directly
 	var idList string
@@ -198,6 +235,9 @@ func SuggestCourses(c echo.Context) error {
 		c.Skills = strings.Split(c.SkillsStr, "  ")
 		data = append(data, c)
 	}
+
+	// save to cache
+	go cacheCourses(r, k, data, 5*time.Minute)
 
 	return c.JSON(http.StatusOK, map[string]any{
 		"data": data,
