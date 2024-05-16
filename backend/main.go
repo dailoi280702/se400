@@ -43,4 +43,6 @@ func registerRouter(e *echo.Group) {
 	coursesGr.GET("", handlers.GetCourses)
 
 	e.GET("/search", handlers.SearchCourses)
+
+	e.POST("/suggest", handlers.SuggestCourses)
 }
