@@ -34,6 +34,49 @@ func cacheCourses(r *redisC.RedisC, key string, value any, expiration time.Durat
 	}
 }
 
+func GetCourseByID(c echo.Context) error {
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid course ID format")
+	}
+
+	r := redisC.RDB
+	k := fmt.Sprintf("course:%d", id)
+	data := &Course{}
+
+	// Get from cache
+	if err := r.GetJSON(k, data); err == nil && data.ID > 0 {
+		return c.JSON(http.StatusOK, data)
+	}
+
+	db := postgresC.DB
+
+	query := `
+        SELECT id, name, university_name, description, rating, skills_covered
+        FROM courses
+        WHERE id = $1
+        `
+
+	row := db.QueryRowx(query, id)
+	err = row.StructScan(data)
+
+	if err == sql.ErrNoRows {
+		return echo.NewHTTPError(http.StatusNotFound, "Course not found")
+	}
+
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("fail to get course by ID: %+v", err))
+	}
+
+	data.Skills = strings.Split(data.SkillsStr, "  ")
+
+	// Save to cache
+	go cacheCourses(r, k, data, 10*time.Minute)
+
+	return c.JSON(http.StatusOK, data)
+}
+
 func GetCourses(c echo.Context) error {
 	pReq := PaginationReq{}
 	if err := c.Bind(&pReq); err != nil {
@@ -126,7 +169,7 @@ func SearchCourses(c echo.Context) error {
 		if err := rows.StructScan(&c); err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("fail to bind course: %+v", err))
 		}
-		c.Skills = strings.Split(c.SkillsStr, " ")
+		c.Skills = strings.Split(c.SkillsStr, "  ")
 		data = append(data, c)
 	}
 
