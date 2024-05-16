@@ -10,7 +10,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type Coures struct {
+type Course struct {
 	ID             int      `json:"id" db:"id"`
 	Name           string   `json:"name" db:"name"`
 	Description    string   `json:"description" db:"description"`
@@ -28,7 +28,7 @@ func GetCourses(c echo.Context) error {
 	p := pReq.Transform()
 
 	db := postgresC.DB
-	data := make([]Coures, 0)
+	data := make([]Course, 0)
 
 	query := fmt.Sprintf(`select id, name, university_name, description, rating, skills_covered from courses limit %d offset %d`, p.Limit, p.Offset)
 
@@ -38,7 +38,7 @@ func GetCourses(c echo.Context) error {
 	}
 
 	for rows.Next() {
-		var c Coures
+		var c Course
 		if err := rows.StructScan(&c); err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("fail to bind course: %+v", err))
 		}
@@ -69,26 +69,32 @@ func SearchCourses(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Value for search request is required")
 	}
 
+	if len(req.Value) > 200 {
+		return echo.NewHTTPError(http.StatusBadRequest, "search length too big")
+	}
+
 	db := postgresC.DB
-	data := make([]Coures, 0)
+	data := make([]Course, 0)
+
+	escapedValue := "%" + strings.ReplaceAll(req.Value, "\\", "\\\\") + "%"
 
 	query := `
-        select id, name, university_name, description, rating, skills_covered 
-        from courses 
-        where (name ilike '%$1::string%' or skills_covered ilike '%$1::string%')
-        limit $2 offset $3`
+    SELECT id, name, university_name, description, rating, skills_covered
+    FROM courses
+    WHERE (name ILIKE $1 OR skills_covered ILIKE $1)
+    LIMIT $2 OFFSET $3`
 
-	rows, err := db.Queryx(query, req.Value, p.Limit, p.Offset)
+	rows, err := db.Queryx(query, escapedValue, p.Limit, p.Offset)
 	if err != nil && err != sql.ErrNoRows {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("fail to search courses: %+v", err))
 	}
 
 	for rows.Next() {
-		var c Coures
+		var c Course
 		if err := rows.StructScan(&c); err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("fail to bind course: %+v", err))
 		}
-		c.Skills = strings.Split(c.SkillsStr, "  ")
+		c.Skills = strings.Split(c.SkillsStr, " ")
 		data = append(data, c)
 	}
 
