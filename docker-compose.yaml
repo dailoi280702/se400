@@ -5,7 +5,7 @@ services:
     image: traefik:latest
     command: --api.insecure=true --providers.docker
     ports:
-      - "9000:80"
+      - "4000:80"
       - "8080:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -27,6 +27,8 @@ services:
     depends_on:
       - postgres
       - redis
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   data-warehouse:
     build: data-warehouse
