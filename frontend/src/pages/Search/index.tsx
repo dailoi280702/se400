@@ -1,9 +1,10 @@
 import ProductsList from "../../components/ProductsList";
 import Paginator from "../../components/Paginator";
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 const SearchPage = () => {
+  const navigate = useNavigate();
   const [courses, setCourses] = useState<Product[]>([]);
   const apiUrl =
     import.meta.env.VITE_BACKEND_API_URL || "http://localhost:4000";
@@ -19,24 +20,26 @@ const SearchPage = () => {
   }, [page, search]);
 
   const getAllCourses = () => {
-    fetch(
-      search
-        ? `${apiUrl}/api/search?value=${search}&page=${page}&limit=${limit}`
-        : `${apiUrl}/api/search?value=""&page=${page}&limit=${limit}`,
-      {
-        headers: new Headers({
-          "ngrok-skip-browser-warning": "69420",
-        }),
-      }
-    )
-      .then((response) => response.json())
-      .then((data) => {
-        setTotalCourses(data.data.length);
-        console.log(data.data.length);
-      })
-      .catch((error) => {
-        console.error("Error fetching users:", error);
-      });
+    if (search) {
+      fetch(
+        `${apiUrl}/api/search?value=${search}&page=${page}&limit=${limit}`,
+        {
+          headers: new Headers({
+            "ngrok-skip-browser-warning": "69420",
+          }),
+        }
+      )
+        .then((response) => response.json())
+        .then((data) => {
+          setTotalCourses(data.data.length);
+          console.log(data.data.length);
+        })
+        .catch((error) => {
+          console.error("Error fetching users:", error);
+        });
+    } else {
+      navigate(`/`);
+    }
   };
 
   const getCourses = (page: number, limit: number) => {
