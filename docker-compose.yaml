@@ -1,8 +1,11 @@
 version: "3.8"
 
 services:
+  traefik:
+    image: traefik:v2.4.8
+    network_mode: host
   api-gateway:
-    image: traefik:latest
+    image: traefik:v2.4.8
     command: --api.insecure=true --providers.docker
     ports:
       - "4000:80"
@@ -11,8 +14,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - traefik-net
-    depends_on:
-      - backend
 
   backend:
     build: backend

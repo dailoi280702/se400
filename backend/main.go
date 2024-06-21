@@ -16,7 +16,7 @@ func main() {
 	e := echo.New()
 	e.Use(middleware.Logger())
 	e.Pre(middleware.RemoveTrailingSlash())
-
+	e.Use(middleware.CORS())
 	api := e.Group("/api")
 
 	registerRouter(api)

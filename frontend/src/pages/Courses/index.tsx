@@ -1,0 +1,46 @@
+import ProductsList from "../../components/ProductsList";
+import Paginator from "../../components/Paginator";
+import { useEffect, useState } from "react";
+
+const CoursesPage = () => {
+  const [courses, setCourses] = useState<Product[]>([]);
+  const apiUrl = import.meta.env.BACKEND_API_URL || "http://localhost:4000";
+  const page = 1;
+  const total = 100;
+  const limit = 8;
+
+  useEffect(() => {
+    getCourses();
+  }, []);
+
+  const getCourses = () => {
+    fetch(`${apiUrl}/api/courses?page=${page}`)
+      .then((response) => {
+        if (!response.ok) {
+          if (response.status == 401) {
+            localStorage.clear();
+          }
+        }
+        return response.json();
+      })
+      .then((data) => {
+        setCourses(data);
+        console.log(courses);
+      })
+      .catch((error) => {
+        console.error("Error fetching users:", error);
+      });
+  };
+  return (
+    <div className="mx-auto">
+      <div className="my-4">
+        <ProductsList products={courses} />
+      </div>
+      <div className="my-4 mx-4 text-5xl">
+        <Paginator total={total} page={page} limit={limit} />
+      </div>
+    </div>
+  );
+};
+
+export default CoursesPage;
