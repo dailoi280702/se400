@@ -8,22 +8,10 @@ interface Props {
 
 const ProductCard = ({ product }: Props) => {
   const addToCart = () => {};
-  // const [showFullProductName, setShowFullProductName] = useState(false);
-
-  // const toggleShowFullProductName = () => {
-  //   setShowFullProductName(!showFullProductName);
-  // };
-
-  // const productName = showFullProductName
-  //   ? product.name
-  //   : `${product.name.slice(0, 30)}...`;
-
   const [showTooltip, setShowTooltip] = useState(false);
-
   const toggleTooltip = () => {
     setShowTooltip(!showTooltip);
   };
-
   const productName =
     product.name.length > 30 ? `${product.name.slice(0, 30)}...` : product.name;
 

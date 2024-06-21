@@ -33,8 +33,7 @@ const StarRating = ({ rating }: StarRatingProps) => {
 
   return (
     <div className="flex items-center">
-      {renderStars(rating)}
-      <span className="ml-2">{rating.toFixed(1)}</span>
+      <span className="pr-2">{rating.toFixed(1)}</span> {renderStars(rating)}
     </div>
   );
 };

@@ -20,6 +20,7 @@ const Paginator = ({ page, total, limit }: Props) => {
           <button
             className="flex items-center justify-center space-x-1 px-2"
             onClick={() => setPage(page - 1)}
+            disabled={page <= 1}
           >
             <ArrowLongLeftIcon className="h-6 w-6" />
             <p className="text-sm hidden md:inline-block">Previous</p>
@@ -48,6 +49,7 @@ const Paginator = ({ page, total, limit }: Props) => {
           <button
             className="flex items-center justify-center space-x-1 px-2"
             onClick={() => setPage(page + 1)}
+            disabled={page >= Math.ceil(total / limit)}
           >
             <p className="text-sm hidden md:inline-block">Next</p>
             <ArrowLongRightIcon className="h-6 w-6" />
