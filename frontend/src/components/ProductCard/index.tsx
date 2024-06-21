@@ -15,11 +15,21 @@ const ProductCard = ({ product }: Props) => {
   const productName =
     product.name.length > 30 ? `${product.name.slice(0, 30)}...` : product.name;
 
+  const handleClick = (courseId: number) => {
+    const existingIds = localStorage.getItem("listCourseIds");
+    const listCourseIds = existingIds ? JSON.parse(existingIds) : [];
+    if (!listCourseIds.includes(courseId)) {
+      listCourseIds.push(courseId);
+      localStorage.setItem("listCourseIds", JSON.stringify(listCourseIds));
+    }
+  };
+
   return (
     <div className="relative flex flex-col text-neutral-800 bg-white shadow-md w-80 h-auto rounded-xl bg-clip-border ring-1 ring-black ring-opacity-5">
       <Link
         to={`/detail/${product.id}`}
         className="relative mx-2 mt-2 h-48 overflow-hidden text-neutral-700 bg-white aspect-[3/4] rounded-[0.5rem] bg-clip-border"
+        onClick={() => handleClick(product.id)}
       >
         <img
           src="https://st2.depositphotos.com/1350793/8441/i/950/depositphotos_84415820-stock-photo-hand-drawing-online-courses-concept.jpg"

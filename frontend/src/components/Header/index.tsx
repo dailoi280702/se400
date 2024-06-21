@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import HeaderLink from "./HeaderLink";
 import { useState } from "react";
 import { Bars3Icon } from "@heroicons/react/24/outline";
 import Search from "./Search";
@@ -27,7 +26,6 @@ const Header = () => {
       <div className={`${isNavOpen ? "" : "hidden"} w-full md:block md:w-auto`}>
         <ul className="text-base flex flex-col p-4 space-y-2 md:p-0 md:flex-row md:space-x-4 md:space-y-0">
           <Search />
-          <HeaderLink to="/recommendation" text="Recommendations" />
         </ul>
       </div>
     </header>

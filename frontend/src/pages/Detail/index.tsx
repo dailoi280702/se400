@@ -8,25 +8,15 @@ const CourseDetailPage = () => {
   const apiUrl =
     import.meta.env.VITE_BACKEND_API_URL || "http://localhost:4000";
 
-  const addToCart = () => {};
-
   const { id } = useParams<{ id: string }>();
 
   const getCourseDetail = () => {
-    console.log(id);
     fetch(`${apiUrl}/api/courses/${id}`, {
       headers: new Headers({
         "ngrok-skip-browser-warning": "69420",
       }),
     })
-      .then((response) => {
-        if (!response.ok) {
-          if (response.status == 401) {
-            localStorage.clear();
-          }
-        }
-        return response.json();
-      })
+      .then((response) => response.json())
       .then((data) => {
         setCourseDetail(data);
       })
@@ -41,9 +31,9 @@ const CourseDetailPage = () => {
 
   if (courseDetail) {
     return (
-      <div>
+      <div className="m-6">
         <div className="leading-relaxed mx-auto flex ml-80 mr-80">
-          <div className="px-4 py-6 w-2/3">
+          <div className="w-2/3">
             <h1 className="text-2xl mb-2 leading-none font-bold">
               {courseDetail.name}
             </h1>
@@ -63,7 +53,7 @@ const CourseDetailPage = () => {
               ))}
             </div>
           </div>
-          <div className="px-4 py-6 w-1/3">
+          <div className="w-1/3">
             <img
               className="object-cover h-full rounded-sm overflow-hidden ring-1 ring-black ring-opacity-5"
               src="https://st2.depositphotos.com/1350793/8441/i/950/depositphotos_84415820-stock-photo-hand-drawing-online-courses-concept.jpg"
@@ -71,7 +61,7 @@ const CourseDetailPage = () => {
             />
           </div>
         </div>
-        <div className="ml-80 mr-80 pl-2 pr-2">
+        <div className="ml-80 mr-80 mt-4">
           <h2 className="text-lg font-bold mb-2">Description:</h2>
           {courseDetail.description.split(". ").map((line, index) => (
             <div key={index} className="text-neutral-700 text-justify mb-2">
