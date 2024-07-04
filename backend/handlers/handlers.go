@@ -90,7 +90,9 @@ func GetCourses(c echo.Context) error {
 
 	// get from cache
 	if err := r.GetJSON(k, &data); err == nil && len(data) > 0 {
-		return c.JSON(http.StatusOK, data)
+		return c.JSON(http.StatusOK, map[string]any{
+			"data": data,
+		})
 	}
 
 	db := postgresC.DB
@@ -137,7 +139,9 @@ func SearchCourses(c echo.Context) error {
 
 	// get from cache
 	if err := r.GetJSON(k, &data); err == nil && len(data) > 0 {
-		return c.JSON(http.StatusOK, data)
+		return c.JSON(http.StatusOK, map[string]any{
+			"data": data,
+		})
 	}
 
 	req.Value = strings.TrimSpace(req.Value)
@@ -205,7 +209,9 @@ func SuggestCourses(c echo.Context) error {
 
 	// get from cache
 	if err := r.GetJSON(k, &data); err == nil && len(data) > 0 {
-		return c.JSON(http.StatusOK, data)
+		return c.JSON(http.StatusOK, map[string]any{
+			"data": data,
+		})
 	}
 
 	url := "http://course-recommendation:5000/recommendation-model/predict"

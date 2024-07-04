@@ -24,7 +24,7 @@ func init() {
 	RDB = &RedisC{C: c}
 
 	if err := RDB.C.Ping(context.Background()).Err(); err != nil {
-		log.Fatalln(err)
+		log.Println(err)
 	}
 
 	log.Println("Redis connected")
