@@ -13,6 +13,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 import pickle
 import math
 import requests
+from decouple import config
+import sentry_sdk
 
 global similarity, data
 data_path = "/data/processed_data.csv"
@@ -43,6 +45,12 @@ def train(data_path, save_path=None):
     end_time = time.time()  # End training time measurement
     training_time = end_time - start_time
     print(f"Model training completed, time: {training_time:.2f} seconds", flush=True)
+    try:
+        sentry_sdk.capture_message(
+            f"Model training completed, time: {training_time:.2f} seconds"
+        )
+    except:
+        pass
 
     if save_path:
         try:
@@ -158,6 +166,10 @@ def predict_courses():
         return jsonify({"recommended_courses": predictions})
 
     except Exception as e:
+        try:
+            sentry_sdk.capture_exception(e)
+        except:
+            pass
         print(f"An error occurred during prediction: {e}", flush=True)
         print(traceback.format_exc(), flush=True)
         return jsonify({"error": "Internal server error"}), 500
@@ -173,12 +185,25 @@ def retrain_model():
              JSON: {"error": "Error message"} on error.
     """
 
+    webhook_url = ""
+    try:
+        data = request.get_json()
+        webhook_url = data.get("webhook_url", "")
+    except:
+        pass
+
+    if webhook_url == "":
+        webhook_url = config("CLEAR_COURSES_IN_CACHE_WEBHOOK_URL")
+
+    if not webhook_url:
+        webhook_url = CLEAR_CACHE_WEBHOOK_URL
+
     try:
         # Trigger model retraining in a separate thread for non-blocking behavior
         global training_in_progress
         if not training_in_progress:
             training_in_progress = True
-            retrain_thread = Thread(target=retrain_in_thread)
+            retrain_thread = Thread(target=retrain_in_thread, args=(webhook_url,))
             retrain_thread.start()
             training_in_progress = False
         else:
@@ -189,6 +214,10 @@ def retrain_model():
         return jsonify({"message": "Model retraining triggered!"})
 
     except Exception as e:
+        try:
+            sentry_sdk.capture_exception(e)
+        except:
+            pass
         print(f"An error occurred during retraining: {e}", flush=True)
         return jsonify({"error": "Internal server error"}), 500
 
@@ -196,27 +225,37 @@ def retrain_model():
 CLEAR_CACHE_WEBHOOK_URL = "http://backend:8080/api/webhook/clear-course-suggestions"
 
 
-def clear_be_cache():
+def clear_be_cache(url):
     try:
-        print("!Notyfied backend service to clear related cache", flush=True)
-
-        response = requests.post(CLEAR_CACHE_WEBHOOK_URL)
+        response = requests.post(
+            url,
+            json={},
+            auth=("airflow", "airflow"),
+        )
         response.raise_for_status()  # Raise exception for non-2xx status codes
 
     except requests.exceptions.RequestException as e:
-        print(f"Error sending webhook to {CLEAR_CACHE_WEBHOOK_URL}: {e}", flush=True)
+        try:
+            sentry_sdk.capture_exception(e)
+        except:
+            pass
+        print(f"Error sending webhook: {url}", flush=True)
 
 
-def retrain_in_thread():
+def retrain_in_thread(webhook_url):
     """
     Retrains the model in a separate thread.
     """
 
     try:
         train(data_path, model_path)
-        clear_be_cache()
+        clear_be_cache(webhook_url)
 
     except Exception as e:
+        try:
+            sentry_sdk.capture_exception(e)
+        except:
+            pass
         print(f"An error occurred during retraining: {e}", flush=True)
 
 
@@ -228,4 +267,13 @@ if __name__ == "__main__":
         lambda sig, frame: sys.exit(0),
     )
 
-    app.run(host="0.0.0.0", port=5000)  # Run the API on port 5000
+    try:
+        sentry_sdk.init(
+            dsn=config("SENTRY_DSN"),
+            traces_sample_rate=1.0,
+            profiles_sample_rate=1.0,
+        )
+    except:
+        pass
+
+    app.run(host="0.0.0.0", port=int(config("PORT")))  # Run the API on port 5000

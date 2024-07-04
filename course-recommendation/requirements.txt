@@ -3,3 +3,5 @@ nltk
 flask
 scikit-learn
 requests
+sentry-sdk
+python-decouple
