@@ -11,15 +11,16 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - traefik-net
-    depends_on:
-      - backend
 
   backend:
     build: backend
+    environment:
+      SERVER_PORT: ${SERVER_PORT}
+      SENTRY_DSN: ${SENTRY_DSN}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.backendRouter.rule=PathPrefix(`/api`)"
-      - "traefik.http.services.backendRouter.loadbalancer.server.port=8080"
+      - "traefik.http.services.backendRouter.loadbalancer.server.port=${SERVER_PORT}"
       - "traefik.docker.network=traefik-net"
     networks:
       - traefik-net
