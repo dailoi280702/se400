@@ -17,7 +17,7 @@ func init() {
 	}
 
 	if err = DB.Ping(); err != nil {
-		log.Fatalln(err)
+		log.Println(err)
 	}
 
 	log.Println("DB Connected")
