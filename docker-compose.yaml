@@ -58,6 +58,13 @@ services:
       - postgres
       - redis
 
+  frontend:
+    build: frontend
+    environment:
+      VITE_BACKEND_API_URL: "http://localhost:${GATEWAY_PORT}"
+    ports:
+      - "${FRONTEND_PORT}:5173"
+
   data-engine:
     build: data-engine
     environment:
