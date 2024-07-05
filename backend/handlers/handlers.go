@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/labstack/echo/v4"
 )
 
@@ -35,6 +36,8 @@ func cacheCourses(r *redisC.RedisC, key string, value any, expiration time.Durat
 }
 
 func GetCourseByID(c echo.Context) error {
+	defer sentry.Flush(2 * time.Second)
+
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -47,8 +50,10 @@ func GetCourseByID(c echo.Context) error {
 
 	// Get from cache
 	if err := r.GetJSON(k, data); err == nil && data.ID > 0 {
+		sentry.CaptureMessage(fmt.Sprintf("key %s was found", k))
 		return c.JSON(http.StatusOK, data)
 	}
+	sentry.CaptureMessage(fmt.Sprintf("key %s was not found", k))
 
 	db := postgresC.DB
 
@@ -66,6 +71,7 @@ func GetCourseByID(c echo.Context) error {
 	}
 
 	if err != nil {
+		sentry.CaptureException(err)
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("fail to get course by ID: %+v", err))
 	}
 
@@ -78,6 +84,8 @@ func GetCourseByID(c echo.Context) error {
 }
 
 func GetCourses(c echo.Context) error {
+	defer sentry.Flush(2 * time.Second)
+
 	pReq := PaginationReq{}
 	if err := c.Bind(&pReq); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest)
@@ -90,10 +98,12 @@ func GetCourses(c echo.Context) error {
 
 	// get from cache
 	if err := r.GetJSON(k, &data); err == nil && len(data) > 0 {
+		sentry.CaptureMessage(fmt.Sprintf("key %s was found", k))
 		return c.JSON(http.StatusOK, map[string]any{
 			"data": data,
 		})
 	}
+	sentry.CaptureMessage(fmt.Sprintf("key %s was not found", k))
 
 	db := postgresC.DB
 
@@ -101,12 +111,14 @@ func GetCourses(c echo.Context) error {
 
 	rows, err := db.Queryx(query)
 	if err != nil && err != sql.ErrNoRows {
+		sentry.CaptureException(err)
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("fail to get courses: %+v", err))
 	}
 
 	for rows.Next() {
 		var c Course
 		if err := rows.StructScan(&c); err != nil {
+			sentry.CaptureException(err)
 			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("fail to bind course: %+v", err))
 		}
 		c.Skills = strings.Split(c.SkillsStr, "  ")
@@ -127,6 +139,8 @@ type SearchReq struct {
 }
 
 func SearchCourses(c echo.Context) error {
+	defer sentry.Flush(2 * time.Second)
+
 	req := SearchReq{}
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest)
@@ -139,10 +153,12 @@ func SearchCourses(c echo.Context) error {
 
 	// get from cache
 	if err := r.GetJSON(k, &data); err == nil && len(data) > 0 {
+		sentry.CaptureMessage(fmt.Sprintf("key %s was found", k))
 		return c.JSON(http.StatusOK, map[string]any{
 			"data": data,
 		})
 	}
+	sentry.CaptureMessage(fmt.Sprintf("key %s was not found", k))
 
 	req.Value = strings.TrimSpace(req.Value)
 	if req.Value == "" {
@@ -165,12 +181,15 @@ func SearchCourses(c echo.Context) error {
 
 	rows, err := db.Queryx(query, escapedValue, p.Limit, p.Offset)
 	if err != nil && err != sql.ErrNoRows {
+		sentry.CaptureException(err)
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("fail to search courses: %+v", err))
 	}
 
 	for rows.Next() {
 		var c Course
 		if err := rows.StructScan(&c); err != nil {
+			sentry.CaptureException(err)
+			sentry.CaptureException(err)
 			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("fail to bind course: %+v", err))
 		}
 		c.Skills = strings.Split(c.SkillsStr, "  ")
@@ -194,6 +213,9 @@ type SuggestCoursesRes struct {
 }
 
 func SuggestCourses(c echo.Context) error {
+	defer sentry.Flush(2 * time.Second)
+
+	defer sentry.Flush(2 * time.Second)
 	req := SuggestCoursesReq{}
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest)
@@ -208,16 +230,20 @@ func SuggestCourses(c echo.Context) error {
 	k := fmt.Sprintf("recommended-courses:%+v", req)
 
 	// get from cache
+
 	if err := r.GetJSON(k, &data); err == nil && len(data) > 0 {
+		sentry.CaptureMessage(fmt.Sprintf("key %s was found", k))
 		return c.JSON(http.StatusOK, map[string]any{
 			"data": data,
 		})
 	}
+	sentry.CaptureMessage(fmt.Sprintf("key %s was not found", k))
 
 	url := "http://course-recommendation:5000/recommendation-model/predict"
 
 	requestBody, err := json.Marshal(req)
 	if err != nil {
+		sentry.CaptureException(err)
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("failed to marshal request: %v", err))
 	}
 
@@ -225,6 +251,7 @@ func SuggestCourses(c echo.Context) error {
 	client := &http.Client{}
 	httpReq, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(requestBody))
 	if err != nil {
+		sentry.CaptureException(err)
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("failed to create request: %v", err))
 	}
 
@@ -232,6 +259,7 @@ func SuggestCourses(c echo.Context) error {
 
 	resp, err := client.Do(httpReq)
 	if err != nil {
+		sentry.CaptureException(err)
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("failed to send request: %v", err))
 	}
 	defer resp.Body.Close()
@@ -247,6 +275,7 @@ func SuggestCourses(c echo.Context) error {
 
 	var response SuggestCoursesRes
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		sentry.CaptureException(err)
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("failed to parse response: %v", err))
 	}
 
@@ -274,12 +303,15 @@ func SuggestCourses(c echo.Context) error {
 
 	rows, err := db.Queryx(query)
 	if err != nil && err != sql.ErrNoRows {
+		sentry.CaptureException(err)
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("fail to get suggested courses: %+v", err))
 	}
 
 	for rows.Next() {
 		var c Course
 		if err := rows.StructScan(&c); err != nil {
+			sentry.CaptureException(err)
+			sentry.CaptureException(err)
 			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("fail to bind course: %+v", err))
 		}
 		c.Skills = strings.Split(c.SkillsStr, "  ")
@@ -295,19 +327,20 @@ func SuggestCourses(c echo.Context) error {
 }
 
 func ClearSuggestedCoursesCache(c echo.Context) error {
+	defer sentry.Flush(2 * time.Second)
+
 	go func() {
 		pattern := "recommended-courses:*"
 		r := redisC.RDB
-		keys, err := r.C.Keys(context.Background(), pattern).Result()
-		if err != nil {
-			log.Println("Error deleting key:", err)
-		}
+		keys, _ := r.C.Keys(context.Background(), pattern).Result()
 
 		for _, key := range keys {
 			if err := r.C.Del(context.Background(), key).Err(); err != nil {
 				log.Println("Error deleting key:", key, err)
 			}
 		}
+
+		sentry.CaptureMessage("Cache for courses was cleared")
 	}()
 
 	return c.JSON(http.StatusOK, map[string]any{

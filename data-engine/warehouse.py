@@ -1,6 +1,8 @@
 import psycopg2
 import pandas as pd
 import numpy as np
+from decouple import config
+import time
 
 
 def process_data_from_db():
@@ -11,11 +13,11 @@ def process_data_from_db():
     print("ETL: extracting data from sources", flush=True)
     # Connect to database
     conn = psycopg2.connect(
-        host="postgres",
-        port="5432",
-        database="postgres",
-        user="postgres",
-        password="postgres",
+        host=config("DB_HOST"),
+        port=config("DB_PORT"),
+        database=config("DB_NAME"),
+        user=config("DB_USER"),
+        password=config("DB_PASS"),
     )
 
     # Extract data from database
@@ -51,5 +53,7 @@ def process_data_from_db():
 
     # Close database connection
     conn.close()
+
+    time.sleep(5)
 
     print("Data processing complete!", flush=True)
