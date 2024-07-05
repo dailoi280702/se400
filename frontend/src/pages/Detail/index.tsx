@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import StarRating from "../../components/StarRating";
 import Tag from "../../components/Tag";
+import ProductsList from "../../components/ProductsList";
 
 const CourseDetailPage = () => {
   const [courseDetail, setCourseDetail] = useState<Product>();
+  const [coursesReconmmend, setCoursesReconmmend] = useState<Product[]>([]);
   const apiUrl =
     import.meta.env.VITE_BACKEND_API_URL || "http://localhost:4000";
 
@@ -25,8 +27,34 @@ const CourseDetailPage = () => {
       });
   };
 
+  const getCoursesRecommend = () => {
+    if (id === undefined) {
+      console.error("ID is undefined");
+      return;
+    }
+    const requestBody = {
+      course_ids: [JSON.parse(id)],
+    };
+    fetch(`${apiUrl}/api/suggest`, {
+      method: "POST",
+      headers: new Headers({
+        "Content-Type": "application/json",
+        "ngrok-skip-browser-warning": "69420",
+      }),
+      body: JSON.stringify(requestBody),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        setCoursesReconmmend(data.data.slice(0, 8));
+      })
+      .catch((error) => {
+        console.error("Error fetching users:", error);
+      });
+  };
+
   useEffect(() => {
     getCourseDetail();
+    getCoursesRecommend();
   }, []);
 
   if (courseDetail) {
@@ -68,8 +96,15 @@ const CourseDetailPage = () => {
               {line}.
             </div>
           ))}
+          <div className="mx-auto mt-8">
+            <div>
+              <p className="font-bold text-xl">RELATED COURSES</p>
+              <div className="my-4">
+                <ProductsList products={coursesReconmmend} />
+              </div>
+            </div>
+          </div>
         </div>
-        ;
       </div>
     );
   }
